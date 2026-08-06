@@ -1,11 +1,13 @@
 from __future__ import annotations
 import os
+import io
 import pandas as pd
 from datetime import datetime, timezone
 from pathlib import Path
 
 from ingestion.config import settings
 from ingestion.watermark import WatermarkManager
+from ingestion.minio_client import MinioClient
 from data_generator.db import PostgresClient
 
 class IncrementalExtractor:
@@ -50,16 +52,29 @@ class IncrementalExtractor:
             print(f"[{self.table_name}] No new records to extract.")
             return 0
 
-        # 3. Save to Bronze (Parquet)
+        # 3. Save to Bronze (Parquet) and Upload to MinIO
         # Generate a unique filename based on current time
         timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"{self.table_name}_{timestamp_str}.parquet"
-        filepath = self.bronze_table_dir / filename
         
-        # Write to parquet, preserving types
-        df.to_parquet(filepath, engine="pyarrow", index=False)
-        print(f"[{self.table_name}] Extracted {row_count} rows to {filepath}")
-
+        # We will write directly to an in-memory buffer
+        buffer = io.BytesIO()
+        df.to_parquet(buffer, engine="pyarrow", index=False)
+        buffer.seek(0)
+        
+        # Upload to MinIO
+        minio_client = MinioClient()
+        object_key = f"bronze/{self.table_name}/{filename}"
+        
+        success = minio_client.upload_buffer(buffer.getvalue(), object_key)
+        
+        if success:
+            print(f"[{self.table_name}] Uploaded {row_count} rows to s3://{settings.minio_bucket}/{object_key}")
+        else:
+            print(f"[{self.table_name}] Failed to upload to MinIO. Saving locally as backup...")
+            filepath = self.bronze_table_dir / filename
+            df.to_parquet(filepath, engine="pyarrow", index=False)
+            
         # 4. Update Watermark
         # Find the max updated_at in the extracted dataset
         max_timestamp = df[self.date_column].max()

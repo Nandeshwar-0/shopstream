@@ -21,7 +21,13 @@ class Settings:
         object.__setattr__(self, "postgres_user", self._get_env("POSTGRES_USER", "shopstream"))
         object.__setattr__(self, "postgres_password", self._get_env("POSTGRES_PASSWORD", "shopstream123"))
         
-        # Local dir for data lake bronze layer
+        # MinIO (S3-compatible) configs
+        object.__setattr__(self, "minio_endpoint", self._get_env("MINIO_ENDPOINT", "localhost:9000"))
+        object.__setattr__(self, "minio_access_key", self._get_env("MINIO_ACCESS_KEY", "admin"))
+        object.__setattr__(self, "minio_secret_key", self._get_env("MINIO_SECRET_KEY", "admin12345"))
+        object.__setattr__(self, "minio_bucket", self._get_env("MINIO_BUCKET", "shopstream-lake"))
+        
+        # Local dir for data lake bronze layer (legacy/fallback)
         bronze = Path(__file__).resolve().parents[1] / "data" / "bronze"
         bronze.mkdir(parents=True, exist_ok=True)
         object.__setattr__(self, "bronze_dir", str(bronze))
