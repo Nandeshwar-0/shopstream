@@ -15,7 +15,7 @@ def check_data_quality():
         null_count = orders_df.filter(col("order_id").isNull()).count()
         if null_count > 0:
             print(f"❌ DATA QUALITY ALERT: Found {null_count} rows with NULL order_id!")
-            sys.exit(1) # We exit with '1' so Airflow knows the task failed!
+            sys.exit(1) # Exit with '1' so Airflow knows the task failed!
             
         # Check 2: Uniqueness of Order IDs (No duplicates)
         total_orders = orders_df.count()
