@@ -38,6 +38,55 @@ services:
     volumes:
       - minio_data:/data
 
+  airflow-init:
+    build: .
+    container_name: shopstream-airflow-init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://shopstream:shopstream123@postgres/shopstream
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+    volumes:
+      - .:/opt/airflow
+    depends_on:
+      - postgres
+    command: version
+
+  airflow-webserver:
+    build: .
+    container_name: shopstream-airflow-webserver
+    restart: always
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://shopstream:shopstream123@postgres/shopstream
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/opt/airflow
+    depends_on:
+      - postgres
+      - airflow-init
+    command: webserver
+
+  airflow-scheduler:
+    build: .
+    container_name: shopstream-airflow-scheduler
+    restart: always
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://shopstream:shopstream123@postgres/shopstream
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - .:/opt/airflow
+    depends_on:
+      - postgres
+      - airflow-init
+    command: scheduler
+
 volumes:
   postgres_data:
   minio_data:

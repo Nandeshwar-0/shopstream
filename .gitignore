@@ -25,3 +25,6 @@ data/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Configs
+*.cfg
